@@ -1,4 +1,4 @@
-use actix_web::{post, web, App, HttpServer, Responder};
+use actix_web::{post, web, App, HttpServer, Responder, HttpResponse};
 use serde::Deserialize;
 #[derive(Deserialize)]
 struct LoginInfo {
@@ -7,7 +7,11 @@ struct LoginInfo {
 }
 #[post("/login")]
 async fn index(login_info: web::Json<LoginInfo>) -> impl Responder {
-    format!("Hello {}! password:{}",login_info.username , login_info.password)
+    if login_info.username == login_info.password {
+        HttpResponse::Ok().json("success")
+    } else {
+        HttpResponse::Forbidden().json("password error")
+    }
 }
 
 #[actix_rt::main]
