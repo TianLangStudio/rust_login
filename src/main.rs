@@ -12,6 +12,7 @@ async fn index(login_info: web::Json<LoginInfo>) -> impl Responder {
     } else {
         HttpResponse::Forbidden().json("password error")
     }
+
 }
 
 #[actix_rt::main]
