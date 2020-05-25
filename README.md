@@ -8,7 +8,8 @@ The first step of Web Development
 
 1. [post username and password use json](https://blog.csdn.net/tianlangstudio/article/details/106169242) 
 
-2. [return success or fail by password is equals to username] 
+2. return success or fail by password is equals to username
 > commit id   541075e
 
+3. Unified representation return results of API use struct AjaxResult 
 
