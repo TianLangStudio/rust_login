@@ -11,5 +11,7 @@ The first step of Web Development
 2. return success or fail by password is equals to username
 > commit id   541075e
 
-3. Unified representation return results of API use struct AjaxResult 
+3. Unified representation return results of API with struct AjaxResult 
 
+4. Add Session Support 
+> actix-session 
