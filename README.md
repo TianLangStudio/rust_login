@@ -14,4 +14,6 @@ The first step of Web Development
 3. Unified representation return results of API with struct AjaxResult 
 
 4. Add Session Support 
-> actix-session 
+> actix-session  
+
+5. Add Blake2 Support

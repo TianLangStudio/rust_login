@@ -10,5 +10,6 @@ edition = "2018"
 actix-web="2"
 actix-rt="1"
 actix-session="0.3"
+blake2 = "0.8"
 
 serde="1"

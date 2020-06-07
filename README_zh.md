@@ -14,4 +14,6 @@ Web第一步用户先登录
 3. 统一返回结果类型 
 
 4. 添加Session支持　
-> 使用actix session中间件
+> 使用actix session中间件 
+
+5. 使用Blake2生成签名信息 
