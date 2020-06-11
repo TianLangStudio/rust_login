@@ -17,3 +17,6 @@ The first step of Web Development
 > actix-session  
 
 5. Add Blake2 Support
+
+6. Add SSL/TSL Support with rustls 
+
