@@ -97,21 +97,46 @@ async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Respo
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    let mut config = ServerConfig::new(NoClientAuth::new());
-    let cert_file = &mut BufReader::new(File::open("./conf/cert.pem").unwrap());
-    let key_file = &mut BufReader::new(File::open("./conf/key.pem").unwrap());
-    let cert_chain = certs(cert_file).unwrap();
-    let mut keys = rsa_private_keys(key_file).unwrap();
-    config.set_single_cert(cert_chain, keys.remove(0)).unwrap();
+    let mut app_config = config::Config::new();
+    app_config.merge(config::File::with_name("conf/application")).unwrap();
 
-    HttpServer::new(|| App::new()
+    let is_prod = match app_config.get_str("tl.app.mode")  {
+        Ok(value) => {
+            let config_file_name = format!("conf/application_{}", value);
+            app_config.merge(config::File::with_name(&config_file_name)).unwrap();
+            if value == "prod" {true} else {false}
+        }
+        _ => {
+            app_config.merge(config::File::with_name("conf/application_dev")).unwrap();
+            false
+        }
+    };
+    app_config.merge(config::Environment::with_prefix("TL_APP")).unwrap();
+    let server = HttpServer::new(move || App::new()
         .wrap(
             CookieSession::signed(&[0; 32]) // <- create cookie based session middleware
-                .secure(false),
-        ).service(index))
-        .bind_rustls("127.0.0.1:8443", config)?
-        .run()
-        .await
+                .secure(is_prod),
+        ).service(index));
+
+    if is_prod  {
+
+        let mut config = ServerConfig::new(NoClientAuth::new());
+        let cert_file = &mut BufReader::new(File::open("./conf/cert.pem").unwrap());
+        let key_file = &mut BufReader::new(File::open("./conf/key.pem").unwrap());
+        let cert_chain = certs(cert_file).unwrap();
+        let mut keys = rsa_private_keys(key_file).unwrap();
+        config.set_single_cert(cert_chain, keys.remove(0)).unwrap();
+
+        server.bind_rustls("127.0.0.1:8443", config)?
+            .run()
+            .await
+    }else {
+        server.bind("127.0.0.1:8088")?
+            .run()
+            .await
+    }
+
+
 }
 
 #[cfg(test)]
