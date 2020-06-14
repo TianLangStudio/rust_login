@@ -20,4 +20,6 @@ Web第一步用户先登录
 
 6. 使用rustls提供https服务  
 
-7. 使用config管理配置文件  
+7. 使用config管理配置文件   
+
+8. 使用log4rs管理日志  

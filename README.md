@@ -20,4 +20,6 @@ The first step of Web Development
 
 6. Add SSL/TSL Support with rustls 
 
-7. Add Config Support with config
+7. Add Config Support with config 
+
+8. Log Manage with log4rs

@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use blake2::{Blake2b, Digest};
 use rustls::internal::pemfile::{certs, rsa_private_keys};
 use rustls::{NoClientAuth, ServerConfig};
+use log::{error,info,warn};
+use log4rs;
+
 
 #[derive(Deserialize)]
 struct LoginInfo {
@@ -67,7 +70,7 @@ async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Respo
 
     match session.get::<String>(SESSION_USER_KEY) {
         Ok(Some(user_info)) if user_info == login_info.username => {
-            println!("already logged in");
+            info!("already logged in");
             let user_key_sign = sign(&user_info);
             match session.get::<String>(SESSION_USER_KEY_SIGN) {
                 Ok(Some(user_key_sign_session)) if user_key_sign == user_key_sign_session => {
@@ -82,7 +85,7 @@ async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Respo
 
         }
         _ => {
-            println!("login now");
+            info!("login now");
             if login_info.username == login_info.password {
                 let user_key_sign =  sign(&login_info.username);
                 session.set::<String>(SESSION_USER_KEY_SIGN, user_key_sign);
@@ -97,6 +100,7 @@ async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Respo
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    log4rs::init_file("conf/log4rs.yaml", Default::default()).unwrap();
     let mut app_config = config::Config::new();
     app_config.merge(config::File::with_name("conf/application")).unwrap();
 
