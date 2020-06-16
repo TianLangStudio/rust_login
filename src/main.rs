@@ -11,11 +11,13 @@ use log::{error,info,warn};
 use log4rs;
 
 
-#[derive(Deserialize)]
-struct LoginInfo {
-   username: String,
-   password: String,
-}
+use diesel::prelude::*;
+//use diesel::mysql::MysqlConnection;
+use diesel::r2d2::{self, ConnectionManager};
+
+
+use rust_login::models::{LoginInfo, NewLoginInfo, LoginInfoModel};
+type Pool = r2d2::Pool<ConnectionManager<MysqlConnection>>;
 
 #[derive(Deserialize)]
 #[derive(Serialize)]
@@ -65,8 +67,30 @@ fn sign(text: &str) -> String {
 const SESSION_USER_KEY: &str = "user_info";
 const SESSION_USER_KEY_SIGN: &str = "user_info_sign";
 
+#[post("/register")]
+async fn register(
+    pool: web::Data<Pool>,
+    login_info: web::Json<LoginInfo>
+) -> impl Responder {
+        use rust_login::schema::tb_login_info;
+        let conn:&MysqlConnection = &pool.get().unwrap();
+        let new_login_info = NewLoginInfo {
+                username: &login_info.username,
+                password: &sign(&login_info.password),
+        };
+        match diesel::insert_into(tb_login_info::table)
+                     .values(&new_login_info)
+                     .execute(conn) {
+                            Ok(info) => HttpResponse::Ok().json(AjaxResult::success_with_single(info)),
+                            Err(err) =>  HttpResponse::Forbidden().json(AjaxResult::<String>::fail(err.to_string()))
+                     }
+}
+
 #[post("/login")]
-async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Responder {
+async fn login(
+    session: Session, 
+    pool: web::Data<Pool>,
+    login_info: web::Json<LoginInfo>) -> impl Responder {
 
     match session.get::<String>(SESSION_USER_KEY) {
         Ok(Some(user_info)) if user_info == login_info.username => {
@@ -85,14 +109,26 @@ async fn index(session: Session, login_info: web::Json<LoginInfo>) -> impl Respo
 
         }
         _ => {
-            info!("login now");
-            if login_info.username == login_info.password {
-                let user_key_sign =  sign(&login_info.username);
-                session.set::<String>(SESSION_USER_KEY_SIGN, user_key_sign);
-                session.set::<String>(SESSION_USER_KEY, login_info.username.clone());
-                HttpResponse::Ok().json(AjaxResult::<bool>::success_without_data())
-            } else {
-                HttpResponse::Forbidden().json(AjaxResult::<bool>::fail("password must match username".to_string()))
+            info!("{} login now", login_info.username);
+              
+            use rust_login::schema::tb_login_info::dsl::*;
+            let conn:&MysqlConnection = &pool.get().unwrap();
+            match tb_login_info.filter(username.eq(&login_info.username))
+                                        .load::<LoginInfoModel>(conn)   {
+                        Ok(login_infos)  if login_infos.len() == 1 && login_infos[0].password == login_info.password =>  {
+                            let user_key_sign =  sign(&login_info.username);
+                            session.set::<String>(SESSION_USER_KEY_SIGN, user_key_sign);
+                            session.set::<String>(SESSION_USER_KEY, login_info.username.clone());
+                            HttpResponse::Ok().json(AjaxResult::<bool>::success_without_data())
+                        },
+                        Ok(login_infos) if login_infos.len() == 0 =>  {
+                            HttpResponse::Forbidden().json(AjaxResult::<bool>::fail("username is not exists".to_string() ))
+                        }
+                        Ok(login_infos) if login_infos.len() > 1 => {
+                            error!("username {} duplication", login_info.username);
+                            HttpResponse::InternalServerError().json(AjaxResult::<bool>::fail("Illegal username ".to_string() ))
+                        }
+                        _ =>   HttpResponse::Forbidden().json(AjaxResult::<bool>::fail("password does not match username".to_string()))
             }
         }
     }
@@ -116,11 +152,25 @@ async fn main() -> std::io::Result<()> {
         }
     };
     app_config.merge(config::Environment::with_prefix("TL_APP")).unwrap();
+
+    //db
+    let connspec = app_config.get_str("tl.app.db.url") .expect("db url is required");
+         
+    let manager = ConnectionManager::<MysqlConnection>::new(connspec);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create pool.");
+
+
+   
     let server = HttpServer::new(move || App::new()
-        .wrap(
-            CookieSession::signed(&[0; 32]) // <- create cookie based session middleware
-                .secure(is_prod),
-        ).service(index));
+            .data(pool.clone())
+                .wrap(
+                    CookieSession::signed(&[0; 32]) // <- create cookie based session middleware
+                        .secure(is_prod),
+                ).service(login)
+                 .service(register)
+    );
 
     if is_prod  {
 

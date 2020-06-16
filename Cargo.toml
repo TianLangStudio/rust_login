@@ -13,7 +13,11 @@ actix-session="0.3"
 blake2 = "0.8"
 rustls = "0.16"
 serde="1"
-actix-files = "0.2.1"
+actix-files = "0.2.2"
 config="0.10"
 log = "0.4"
 log4rs="0.12"
+
+# database 
+diesel = {version ="1", features=["mysql","r2d2"]} 
+r2d2 = ">= 0.8, < 0.9"

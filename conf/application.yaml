@@ -1,1 +1,3 @@
-tl.app.mode = dev
+tl:
+     app:
+           mode : dev

@@ -23,3 +23,5 @@ The first step of Web Development
 7. Add Config Support with config 
 
 8. Log Manage with log4rs
+
+9. Add ORM Support with diesel
